@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Menü</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    :root { --bg:#f6f7f9; --card:#fff; --text:#1f2937; --muted:#6b7280; --primary:#ea580c; --primary-dark:#c2410c; --border:#e5e7eb; --danger:#dc2626; --ok:#16a34a; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--text); }
+    header { position:sticky; top:0; z-index:10; background:rgba(255,255,255,.95); backdrop-filter: blur(6px); border-bottom:1px solid var(--border); }
+    .wrap { max-width:1100px; margin:0 auto; padding:16px; }
+    .top { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    h1 { margin:0; font-size:1.2rem; }
+    .sub { color:var(--muted); font-size:.9rem; margin-top:2px; }
+    .tabs { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+    .tab { border:1px solid var(--border); background:#fff; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600; }
+    .tab.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+    main .wrap { padding-top:20px; padding-bottom:40px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; }
+    .card h2 { margin:0 0 12px; font-size:1rem; }
+    label { display:block; font-size:.85rem; color:var(--muted); margin:10px 0 4px; }
+    input, select, textarea { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; font:inherit; background:#fff; }
+    textarea { min-height:70px; resize:vertical; }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    button { font:inherit; }
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:#fff; cursor:pointer; font-weight:600; }
+    .btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .btn.primary:hover { background:var(--primary-dark); }
+    .btn.danger { color:var(--danger); border-color:#fecaca; background:#fff; }
+    .actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+    .list { display:flex; flex-direction:column; gap:10px; }
+    .item { border:1px solid var(--border); border-radius:12px; padding:12px; display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .item h3 { margin:0 0 4px; font-size:.98rem; }
+    .meta { color:var(--muted); font-size:.85rem; }
+    .price { font-weight:700; color:var(--primary-dark); white-space:nowrap; }
+    .pill { display:inline-block; font-size:.75rem; padding:2px 8px; border-radius:999px; background:#fff7ed; color:#9a3412; border:1px solid #fed7aa; margin-left:6px; }
+    .empty { color:var(--muted); font-size:.9rem; padding:8px 0; }
+    .toast { position:fixed; right:16px; bottom:16px; background:#111827; color:#fff; padding:10px 14px; border-radius:10px; opacity:0; transform:translateY(8px); transition:.2s; pointer-events:none; z-index:50; }
+    .toast.show { opacity:1; transform:translateY(0); }
+    .modal { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:16px; z-index:40; }
+    .modal-card { background:#fff; border-radius:16px; padding:20px; width:100%; max-width:360px; text-align:center; }
+    .qr-box { display:inline-block; padding:12px; background:#fff; border:1px solid var(--border); border-radius:12px; margin:12px 0; }
+    .table-tag { display:inline-block; margin-top:8px; font-size:.85rem; background:rgba(255,255,255,.2); padding:4px 10px; border-radius:999px; }
+
+    /* Customer menu */
+    #customer-view { max-width:720px; margin:0 auto; }
+    .menu-hero { background:linear-gradient(135deg,#ea580c,#f97316); color:#fff; border-radius:18px; padding:22px; margin-bottom:16px; }
+    .menu-hero h2 { margin:0 0 4px; font-size:1.5rem; }
+    .menu-hero p { margin:0; opacity:.95; }
+    .cat-nav { display:flex; gap:8px; overflow:auto; padding-bottom:4px; margin:12px 0 16px; }
+    .chip { padding:8px 12px; border-radius:999px; border:1px solid var(--border); background:#fff; cursor:pointer; white-space:nowrap; font-weight:600; }
+    .chip.active { background:#111827; color:#fff; border-color:#111827; }
+    .menu-section { margin-bottom:22px; }
+    .menu-section h3 { margin:0 0 10px; font-size:1.05rem; }
+    .menu-card { background:#fff; border:1px solid var(--border); border-radius:14px; padding:14px; display:flex; justify-content:space-between; gap:12px; }
+    .menu-card + .menu-card { margin-top:10px; }
+    .menu-card h4 { margin:0 0 4px; }
+    .desc { color:var(--muted); font-size:.9rem; margin:0; }
+    .badge-off { color:#991b1b; background:#fee2e2; border:1px solid #fecaca; font-size:.75rem; padding:2px 8px; border-radius:999px; display:inline-block; margin-top:6px; }
+    .hidden { display:none !important; }
+    @media (max-width:640px){ .row{grid-template-columns:1fr;} .top{flex-direction:column; align-items:flex-start;} }
+  </style>
+</head>
+<body>
+  <header id="admin-header">
+    <div class="wrap">
+      <div class="top">
+        <div>
+          <h1>QR Menü Yönetimi</h1>
+          <div class="sub">Kategori ve ürün ekleyin, müşteri ekranını görüntüleyin</div>
+        </div>
+        <button class="btn" id="open-customer">Müşteri Ekranını Aç</button>
+      </div>
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="admin">Yönetim</button>
+        <button class="tab" data-tab="preview">Müşteri Önizleme</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <section id="admin-view">
+        <div class="card" style="margin-bottom:16px;">
+          <h2>Menü / İşletme Adı</h2>
+          <div class="row">
+            <div>
+              <label for="cafe-name">QR Menü İsmi (İşletme Adı)</label>
+              <input id="cafe-name" placeholder="Örn: Teras Cafe">
+            </div>
+            <div>
+              <label for="cafe-slogan">Slogan / Alt Başlık</label>
+              <input id="cafe-slogan" placeholder="Örn: Taze kahve ve lezzetler">
+            </div>
+          </div>
+          <div class="actions"><button class="btn primary" id="save-cafe">Bilgileri Kaydet</button></div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h2>Kategori Ekle / Düzenle</h2>
+            <input type="hidden" id="cat-id">
+            <label for="cat-name">Kategori Adı</label>
+            <input id="cat-name" placeholder="Örn: Kahveler">
+            <div class="actions">
+              <button class="btn primary" id="save-cat">Kategoriyi Kaydet</button>
+              <button class="btn" id="reset-cat" type="button">Temizle</button>
+            </div>
+            <div style="margin-top:16px;">
+              <h2>Mevcut Kategoriler</h2>
+              <div id="cat-list" class="list"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Ürün Ekle / Düzenle</h2>
+            <input type="hidden" id="prod-id">
+            <label for="prod-cat">Kategori</label>
+            <select id="prod-cat"></select>
+            <label for="prod-name">Ürün Adı</label>
+            <input id="prod-name" placeholder="Örn: Latte">
+            <div class="row">
+              <div>
+                <label for="prod-price">Fiyat (TL)</label>
+                <input id="prod-price" type="number" step="0.01" min="0" placeholder="0.00">
+              </div>
+              <div>
+                <label for="prod-stock">Durum</label>
+                <select id="prod-stock">
+                  <option value="true">Stokta</option>
+                  <option value="false">Tükendi</option>
+                </select>
+              </div>
+            </div>
+            <label for="prod-desc">Açıklama</label>
+            <textarea id="prod-desc" placeholder="Ürün açıklaması"></textarea>
+            <div class="actions">
+              <button class="btn primary" id="save-prod">Ürünü Kaydet</button>
+              <button class="btn" id="reset-prod" type="button">Temizle</button>
+            </div>
+            <div style="margin-top:16px;">
+              <h2>Mevcut Ürünler</h2>
+              <div id="prod-list" class="list"></div>
+            </div>
+          </div>
+
+          <div class="card" style="grid-column: 1 / -1;">
+            <h2>Masalar &amp; QR Kodları</h2>
+            <p class="meta" style="margin-top:-4px;">Masa ekleyin, her masa için ayrı QR kod oluşturup indirin/yazdırın.</p>
+            <div class="row" style="max-width:520px;">
+              <div>
+                <label for="table-name">Masa Adı / Numarası</label>
+                <input id="table-name" placeholder="Örn: Masa 1, Bahçe 2">
+              </div>
+              <div style="display:flex; align-items:flex-end;">
+                <button class="btn primary" id="add-table" style="width:100%;">Masa Ekle</button>
+              </div>
+            </div>
+            <div style="margin-top:16px;">
+              <h2 style="font-size:.95rem;">Oluşturulan Masalar</h2>
+              <div id="table-list" class="list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="preview-view" class="hidden">
+        <div id="customer-view"></div>
+      </section>
+    </div>
+  </main>
+
+  <div id="toast" class="toast"></div>
+  <div id="qr-modal" class="modal hidden" onclick="if(event.target===this) closeQRModal()">
+    <div class="modal-card">
+      <div class="meta" id="qr-modal-cafe"></div>
+      <h3 id="qr-modal-table" style="margin:4px 0 8px;"></h3>
+      <div id="qr-code" class="qr-box"></div>
+      <div class="meta" id="qr-modal-url" style="word-break:break-all; font-size:.8rem;"></div>
+      <div class="actions" style="justify-content:center; margin-top:14px;">
+        <button class="btn primary" onclick="printQR()">Yazdır</button>
+        <button class="btn" onclick="closeQRModal()">Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const LS_KEY = 'qr_menu_data_v1';
+    const defaults = {
+      cafe: { name: 'İşletme Adı', slogan: 'Menümüze hoş geldiniz' },
+      categories: [
+        { id: uid(), name: 'Kahveler' },
+        { id: uid(), name: 'Tatlılar' }
+      ],
+      products: [
+        { id: uid(), categoryId: null, name: 'Latte', price: 95, desc: 'Yumuşak içimli sütlü kahve', stock: true },
+        { id: uid(), categoryId: null, name: 'Cheesecake', price: 140, desc: 'Günün sosuyla', stock: true }
+      ],
+      tables: [
+        { id: uid(), name: 'Masa 1' },
+        { id: uid(), name: 'Masa 2' }
+      ]
+    };
+    // fix default product category links after creation
+    defaults.products[0].categoryId = defaults.categories[0].id;
+    defaults.products[1].categoryId = defaults.categories[1].id;
+
+    let state = load();
+
+    function uid() { return 'id-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); }
+    function load() {
+      try {
+        const raw = localStorage.getItem(LS_KEY);
+        if (!raw) return structuredClone(defaults);
+        const data = JSON.parse(raw);
+        return {
+          cafe: data.cafe || structuredClone(defaults.cafe),
+          categories: Array.isArray(data.categories) ? data.categories : [],
+          products: Array.isArray(data.products) ? data.products : [],
+          tables: Array.isArray(data.tables) ? data.tables : structuredClone(defaults.tables)
+        };
+      } catch { return structuredClone(defaults); }
+    }
+    function save() { localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg; el.classList.add('show');
+      clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2200);
+    }
+    function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+    function fmtPrice(v){ const n = Number(v||0); return n.toLocaleString('tr-TR', {minimumFractionDigits:0, maximumFractionDigits:2}) + ' ₺'; }
+
+    // Tabs / views
+    const params = new URLSearchParams(location.search);
+    const isCustomerMode = params.get('menu') === '1' || params.has('masa');
+    const currentTableName = params.get('masa') || '';
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(t => t.addEventListener('click', () => {
+      tabs.forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      const tab = t.dataset.tab;
+      document.getElementById('admin-view').classList.toggle('hidden', tab !== 'admin');
+      document.getElementById('preview-view').classList.toggle('hidden', tab !== 'preview');
+      if (tab === 'preview') renderCustomer();
+    }));
+    document.getElementById('open-customer').addEventListener('click', () => {
+      const url = menuUrl('');
+      window.open(url, '_blank');
+    });
+
+    function menuUrl(tableName){
+      const url = new URL(location.href);
+      url.search = '';
+      url.searchParams.set('menu','1');
+      if(tableName) url.searchParams.set('masa', tableName);
+      return url.toString();
+    }
+
+    // Cafe info
+    const cafeName = document.getElementById('cafe-name');
+    const cafeSlogan = document.getElementById('cafe-slogan');
+    function renderCafeForm(){ cafeName.value = state.cafe.name || ''; cafeSlogan.value = state.cafe.slogan || ''; }
+    document.getElementById('save-cafe').addEventListener('click', () => {
+      state.cafe.name = cafeName.value.trim() || 'İşletme Adı';
+      state.cafe.slogan = cafeSlogan.value.trim() || '';
+      save(); renderCustomer(); toast('İşletme bilgileri kaydedildi');
+    });
+
+    // Categories
+    function renderCatOptions(selected='') {
+      const sel = document.getElementById('prod-cat');
+      if (!state.categories.length) {
+        sel.innerHTML = '<option value="">Önce kategori ekleyin</option>';
+        sel.disabled = true;
+      } else {
+        sel.disabled = false;
+        sel.innerHTML = state.categories.map(c => `<option value="${c.id}" ${c.id===selected?'selected':''}>${esc(c.name)}</option>`).join('');
+      }
+    }
+    function renderCatList() {
+      const el = document.getElementById('cat-list');
+      if (!state.categories.length) { el.innerHTML = '<div class="empty">Henüz kategori yok.</div>'; return; }
+      el.innerHTML = state.categories.map(c => {
+        const count = state.products.filter(p => p.categoryId === c.id).length;
+        return `<div class="item"><div><h3>${esc(c.name)}</h3><div class="meta">${count} ürün</div></div>
+          <div class="actions" style="margin:0">
+            <button class="btn" data-edit-cat="${c.id}">Düzenle</button>
+            <button class="btn danger" data-del-cat="${c.id}">Sil</button>
+          </div></div>`;
+      }).join('');
+      el.querySelectorAll('[data-edit-cat]').forEach(b => b.onclick = () => editCategory(b.dataset.editCat));
+      el.querySelectorAll('[data-del-cat]').forEach(b => b.onclick = () => deleteCategory(b.dataset.delCat));
+    }
+    function resetCatForm(){ document.getElementById('cat-id').value=''; document.getElementById('cat-name').value=''; }
+    function editCategory(id){
+      const c = state.categories.find(x=>x.id===id); if(!c) return;
+      document.getElementById('cat-id').value = c.id;
+      document.getElementById('cat-name').value = c.name;
+      document.getElementById('cat-name').focus();
+    }
+    function deleteCategory(id){
+      const c = state.categories.find(x=>x.id===id); if(!c) return;
+      const hasProducts = state.products.some(p=>p.categoryId===id);
+      if(!confirm(`"${c.name}" kategorisini silmek istiyor musunuz?` + (hasProducts ? '\nBu kategorideki ürünler de silinecek.' : ''))) return;
+      state.categories = state.categories.filter(x=>x.id!==id);
+      state.products = state.products.filter(p=>p.categoryId!==id);
+      if (document.getElementById('cat-id').value===id) resetCatForm();
+      save(); renderAll(); toast('Kategori silindi');
+    }
+    document.getElementById('save-cat').addEventListener('click', () => {
+      const id = document.getElementById('cat-id').value;
+      const name = document.getElementById('cat-name').value.trim();
+      if(!name) return alert('Kategori adı girin.');
+      if(id){
+        const c = state.categories.find(x=>x.id===id); if(c) c.name = name; toast('Kategori güncellendi');
+      } else {
+        state.categories.push({id: uid(), name}); toast('Kategori eklendi');
+      }
+      resetCatForm(); save(); renderAll();
+    });
+    document.getElementById('reset-cat').addEventListener('click', resetCatForm);
+
+    // Products
+    function renderProdList(){
+      const el = document.getElementById('prod-list');
+      if (!state.products.length) { el.innerHTML = '<div class="empty">Henüz ürün yok.</div>'; return; }
+      const catName = id => (state.categories.find(c=>c.id===id)||{}).name || 'Kategorisiz';
+      el.innerHTML = state.products.map(p => `
+        <div class="item">
+          <div>
+            <h3>${esc(p.name)} ${p.stock ? '' : '<span class="pill">Tükendi</span>'}</h3>
+            <div class="meta">${esc(catName(p.categoryId))}</div>
+            ${p.desc ? `<div class="meta" style="margin-top:4px">${esc(p.desc)}</div>`:''}
+          </div>
+          <div style="text-align:right">
+            <div class="price">${fmtPrice(p.price)}</div>
+            <div class="actions" style="margin:8px 0 0; justify-content:flex-end">
+              <button class="btn" data-edit-prod="${p.id}">Düzenle</button>
+              <button class="btn danger" data-del-prod="${p.id}">Sil</button>
+            </div>
+          </div>
+        </div>`).join('');
+      el.querySelectorAll('[data-edit-prod]').forEach(b => b.onclick = () => editProduct(b.dataset.editProd));
+      el.querySelectorAll('[data-del-prod]').forEach(b => b.onclick = () => deleteProduct(b.dataset.delProd));
+    }
+    function resetProdForm(){
+      document.getElementById('prod-id').value='';
+      document.getElementById('prod-name').value='';
+      document.getElementById('prod-price').value='';
+      document.getElementById('prod-desc').value='';
+      document.getElementById('prod-stock').value='true';
+      if(state.categories[0]) document.getElementById('prod-cat').value = state.categories[0].id;
+    }
+    function editProduct(id){
+      const p = state.products.find(x=>x.id===id); if(!p) return;
+      document.getElementById('prod-id').value = p.id;
+      document.getElementById('prod-name').value = p.name;
+      document.getElementById('prod-price').value = p.price;
+      document.getElementById('prod-desc').value = p.desc || '';
+      document.getElementById('prod-stock').value = String(!!p.stock);
+      renderCatOptions(p.categoryId);
+      document.getElementById('prod-name').focus();
+    }
+    function deleteProduct(id){
+      const p = state.products.find(x=>x.id===id); if(!p) return;
+      if(!confirm(`"${p.name}" ürününü silmek istiyor musunuz?`)) return;
+      state.products = state.products.filter(x=>x.id!==id);
+      if(document.getElementById('prod-id').value===id) resetProdForm();
+      save(); renderAll(); toast('Ürün silindi');
+    }
+    document.getElementById('save-prod').addEventListener('click', () => {
+      const id = document.getElementById('prod-id').value;
+      const name = document.getElementById('prod-name').value.trim();
+      const categoryId = document.getElementById('prod-cat').value;
+      const price = parseFloat(document.getElementById('prod-price').value);
+      const desc = document.getElementById('prod-desc').value.trim();
+      const stock = document.getElementById('prod-stock').value === 'true';
+      if(!state.categories.length) return alert('Önce bir kategori ekleyin.');
+      if(!name) return alert('Ürün adı girin.');
+      if(!categoryId) return alert('Kategori seçin.');
+      if(!(price >= 0)) return alert('Geçerli bir fiyat girin.');
+      if(id){
+        const p = state.products.find(x=>x.id===id);
+        if(p) Object.assign(p, {name, categoryId, price, desc, stock});
+        toast('Ürün güncellendi');
+      } else {
+        state.products.push({id: uid(), name, categoryId, price, desc, stock});
+        toast('Ürün eklendi');
+      }
+      resetProdForm(); save(); renderAll();
+    });
+    document.getElementById('reset-prod').addEventListener('click', resetProdForm);
+
+    // Tables & QR
+    function renderTableList(){
+      const el = document.getElementById('table-list');
+      if(!state.tables.length){ el.innerHTML = '<div class="empty">Henüz masa yok.</div>'; return; }
+      el.innerHTML = state.tables.map(t => {
+        const url = menuUrl(t.name);
+        return `<div class="item"><div><h3>${esc(t.name)}</h3><div class="meta" style="word-break:break-all">${esc(url)}</div></div>
+          <div class="actions" style="margin:0; justify-content:flex-end">
+            <button class="btn" data-qr="${t.id}">QR Göster</button>
+            <button class="btn" data-copy="${t.id}">Link</button>
+            <button class="btn danger" data-del-table="${t.id}">Sil</button>
+          </div></div>`;
+      }).join('');
+      el.querySelectorAll('[data-qr]').forEach(b => b.onclick = () => showQR(b.dataset.qr));
+      el.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copyTableLink(b.dataset.copy));
+      el.querySelectorAll('[data-del-table]').forEach(b => b.onclick = () => deleteTable(b.dataset.delTable));
+    }
+    document.getElementById('add-table').addEventListener('click', () => {
+      const input = document.getElementById('table-name');
+      const name = input.value.trim();
+      if(!name) return alert('Masa adı/numarası girin.');
+      if(state.tables.some(t => t.name.toLowerCase() === name.toLowerCase())) return alert('Bu isimde bir masa zaten var.');
+      state.tables.push({id: uid(), name});
+      input.value = '';
+      save(); renderAll(); toast('Masa eklendi');
+    });
+    function deleteTable(id){
+      const t = state.tables.find(x=>x.id===id); if(!t) return;
+      if(!confirm(`"${t.name}" masasını silmek istiyor musunuz?`)) return;
+      state.tables = state.tables.filter(x=>x.id!==id);
+      save(); renderAll(); toast('Masa silindi');
+    }
+    function copyTableLink(id){
+      const t = state.tables.find(x=>x.id===id); if(!t) return;
+      const url = menuUrl(t.name);
+      navigator.clipboard?.writeText(url).then(()=>toast('Masa linki kopyalandı')).catch(()=>prompt('Linki kopyalayın:', url));
+    }
+    let qr;
+    function showQR(id){
+      const t = state.tables.find(x=>x.id===id); if(!t) return;
+      const url = menuUrl(t.name);
+      const box = document.getElementById('qr-code');
+      box.innerHTML = '';
+      qr = new QRCode(box, { text: url, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.H });
+      document.getElementById('qr-modal-cafe').textContent = state.cafe.name || 'Menü';
+      document.getElementById('qr-modal-table').textContent = t.name;
+      document.getElementById('qr-modal-url').textContent = url;
+      document.getElementById('qr-modal').classList.remove('hidden');
+    }
+    function closeQRModal(){ document.getElementById('qr-modal').classList.add('hidden'); }
+    function printQR(){
+      const content = document.querySelector('#qr-modal .modal-card').innerHTML;
+      const w = window.open('', '_blank');
+      w.document.write(`<html><head><title>QR Yazdır</title><style>body{font-family:Arial;text-align:center;padding:20px}.qr-box img, .qr-box canvas{margin:0 auto}</style></head><body>${content}</body></html>`);
+      w.document.close(); w.focus(); w.print();
+    }
+
+    // Customer render
+    let selectedCat = 'all';
+    function renderCustomer(){
+      const root = document.getElementById('customer-view');
+      const cats = state.categories;
+      const prods = state.products;
+      const validCatIds = new Set(cats.map(c=>c.id));
+      const catChips = [`<button class="chip ${selectedCat==='all'?'active':''}" data-cat="all">Tümü</button>`]
+        .concat(cats.map(c => `<button class="chip ${selectedCat===c.id?'active':''}" data-cat="${c.id}">${esc(c.name)}</button>`)).join('');
+
+      const sections = (selectedCat==='all' ? cats : cats.filter(c=>c.id===selectedCat)).map(c => {
+        const items = prods.filter(p => p.categoryId === c.id);
+        if(!items.length) return '';
+        return `<div class="menu-section">
+          <h3>${esc(c.name)}</h3>
+          ${items.map(p => `
+            <div class="menu-card">
+              <div>
+                <h4>${esc(p.name)}</h4>
+                ${p.desc ? `<p class="desc">${esc(p.desc)}</p>` : ''}
+                ${p.stock ? '' : '<span class="badge-off">Tükendi</span>'}
+              </div>
+              <div class="price">${fmtPrice(p.price)}</div>
+            </div>`).join('')}
+        </div>`;
+      }).join('');
+
+      const uncategorized = selectedCat==='all' ? prods.filter(p=>!validCatIds.has(p.categoryId)) : [];
+      const extra = uncategorized.length ? `<div class="menu-section"><h3>Diğer</h3>${uncategorized.map(p=>`
+        <div class="menu-card"><div><h4>${esc(p.name)}</h4>${p.desc?`<p class="desc">${esc(p.desc)}</p>`:''}${p.stock?'':'<span class="badge-off">Tükendi</span>'}</div><div class="price">${fmtPrice(p.price)}</div></div>`).join('')}</div>` : '';
+
+      root.innerHTML = `
+        <div class="menu-hero">
+          <h2>${esc(state.cafe.name || 'Menü')}</h2>
+          <p>${esc(state.cafe.slogan || '')}</p>
+          ${currentTableName ? `<div class="table-tag">${esc(currentTableName)}</div>` : ''}
+        </div>
+        ${cats.length ? `<div class="cat-nav">${catChips}</div>` : ''}
+        ${sections || extra ? (sections + extra) : '<div class="card"><div class="empty">Henüz menü eklenmemiş.</div></div>'}
+      `;
+      root.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { selectedCat = b.dataset.cat; renderCustomer(); });
+    }
+
+    function renderAll(){
+      renderCafeForm();
+      renderCatOptions(document.getElementById('prod-cat').value);
+      renderCatList();
+      renderProdList();
+      renderTableList();
+      renderCustomer();
+    }
+
+    // Customer-only mode
+    if (isCustomerMode) {
+      document.getElementById('admin-header').classList.add('hidden');
+      document.getElementById('admin-view').classList.add('hidden');
+      document.getElementById('preview-view').classList.remove('hidden');
+      document.querySelector('main .wrap').style.maxWidth = '720px';
+    }
+
+    renderAll();
+  </script>
+</body>
+</html>
